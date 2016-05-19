@@ -36,6 +36,7 @@ package main
 import (
 	"log"
 	"net"
+	"net/http"
 	"os"
 
 	"github.com/armon/go-proxyproto"
@@ -52,17 +53,33 @@ func (s *server) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.HelloRe
 	return &pb.HelloReply{Message: "Hello " + in.Name}, nil
 }
 
-func main() {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "50051"
+//HEROKU_ROUTER_HTTP_PORT, HEROKU_ROUTER_HTTPS_PORT and HEROKU_ROUTER_HEALTHCHECK_PORT
+
+func getPort(e string) string {
+	v := os.Getenv(e)
+	if v == "" {
+		log.Fatal(e, " is not set")
 	}
-	lis, err := net.Listen("tcp", ":"+port)
+	return v
+}
+
+func main() {
+	httpPort := getPort("HEROKU_ROUTER_HTTP_PORT")
+	//httpsPort := getPort("HEROKU_ROUTER_HTTPS_PORT")
+	healthPort := getPort("HEROKU_ROUTER_HEALTHCHECK_PORT")
+
+	lis, err := net.Listen("tcp", ":"+httpPort)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
 	s := grpc.NewServer()
 	pb.RegisterGreeterServer(s, &server{})
-	s.Serve(&proxyproto.Listener{lis})
+	go s.Serve(&proxyproto.Listener{lis})
+
+	http.ListenAndServe(":"+healthPort, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}),
+	)
+
 }
