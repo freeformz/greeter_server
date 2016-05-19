@@ -54,9 +54,9 @@ func (s *server) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.HelloRe
 func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = ":50051"
+		port = "50051"
 	}
-	lis, err := net.Listen("tcp", port)
+	lis, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
