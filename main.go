@@ -64,6 +64,7 @@ func getPort(e string) string {
 }
 
 func main() {
+	port := getPort("PORT")
 	httpPort := getPort("HEROKU_ROUTER_HTTP_PORT")
 	//httpsPort := getPort("HEROKU_ROUTER_HTTPS_PORT")
 	healthPort := getPort("HEROKU_ROUTER_HEALTHCHECK_PORT")
@@ -77,9 +78,17 @@ func main() {
 	pb.RegisterGreeterServer(s, &server{})
 	go s.Serve(&proxyproto.Listener{lis})
 
-	http.ListenAndServe(":"+healthPort, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}),
+	go http.ListenAndServe(":"+port, http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte("From $PORT"))
+			w.WriteHeader(http.StatusOK)
+		}),
+	)
+
+	http.ListenAndServe(":"+healthPort, http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		}),
 	)
 
 }
